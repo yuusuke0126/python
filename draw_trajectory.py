@@ -11,21 +11,23 @@ c_dist = 1.22 # distance between keycart wheel center and cargo wheel center
 
 angle = pi/4
 r = 1.22 / sin(angle)
+kc2wall = 0.72
+stop_dist = kc2wall + r - c_dist
 max_x = 0.5
 max_z = 0.5
-dt = 0.1
+dt = 0.01
 
-x = np.arange(1.7, 7.1 - r + c_dist, dt*max_x)
-y = 4.1 * np.ones(x.shape)
+x = np.arange(1.7, 8.0 - stop_dist, dt*max_x)
+y = (5.0 - kc2wall) * np.ones(x.shape)
 z = np.zeros(x.shape)
 
-x = np.append(x,7.1 - r + c_dist)
-y = np.append(y,y[-1])
-z = np.append(z,z[-1])
+x = np.append(x, 8.0 - stop_dist)
+y = np.append(y, y[-1])
+z = np.append(z, z[-1])
 
 
-z_ap = np.arange(z[-1], -pi/3, -dt*max_z)
-z_ap = np.append(z_ap, -pi/3)
+z_ap = np.arange(z[-1], -angle, -dt*max_z)
+z_ap = np.append(z_ap, -angle)
 x_ap = x[-1] * np.ones(z_ap.shape)
 y_ap = y[-1] * np.ones(z_ap.shape)
 
@@ -39,16 +41,16 @@ z_ap = np.append(z_ap, -pi/2)
 
 x_ap = x[-1] + r * (-np.sin(z_ap)+sin(z[-1]))
 y_ap = y[-1] + r * (np.cos(z_ap)-cos(z[-1]))
-x_ap[-1] = 7.1
-y_ap[-1] = 3.4
+x_ap[-1] = (8.0 - kc2wall)
+y_ap[-1] = y[-1] - r * cos(angle)
 
 x = np.append(x, x_ap)
 y = np.append(y, y_ap)
 z = np.append(z, z_ap)
 
 
-y_ap = np.arange(y[-1],1.08, -dt*max_x)
-y_ap = np.append(y_ap, 1.08)
+y_ap = np.arange(y[-1], stop_dist, -dt*max_x)
+y_ap = np.append(y_ap, stop_dist)
 x_ap = x[-1] * np.ones(y_ap.shape)
 z_ap = z[-1] * np.ones(y_ap.shape)
 
@@ -57,8 +59,8 @@ y = np.append(y, y_ap)
 z = np.append(z, z_ap)
 
 
-z_ap = np.arange(z[-1], -5.0/6.0*pi, -dt*max_z)
-z_ap = np.append(z_ap, -5.0/6.0*pi)
+z_ap = np.arange(z[-1], -pi/2-angle, -dt*max_z)
+z_ap = np.append(z_ap, -pi/2-angle)
 x_ap = x[-1] * np.ones(z_ap.shape)
 y_ap = y[-1] * np.ones(z_ap.shape)
 
@@ -72,15 +74,15 @@ z_ap = np.append(z_ap, -pi)
 
 x_ap = x[-1] + r * (-np.sin(z_ap)+sin(z[-1]))
 y_ap = y[-1] + r * (np.cos(z_ap)-cos(z[-1]))
-x_ap[-1] = 6.4
-y_ap[-1] = 0.9
+x_ap[-1] = x[-1] - r * cos(angle)
+y_ap[-1] = kc2wall
 
 x = np.append(x, x_ap)
 y = np.append(y, y_ap)
 z = np.append(z, z_ap)
 
-x_ap = np.arange(x[-1], 1.08, -dt*max_x)
-x_ap = np.append(x_ap, 1.08)
+x_ap = np.arange(x[-1], stop_dist, -dt*max_x)
+x_ap = np.append(x_ap, stop_dist)
 y_ap = [y[-1]] * np.ones(x_ap.shape)
 z_ap = [z[-1]] * np.ones(x_ap.shape)
 
@@ -138,17 +140,17 @@ for i in range(x.shape[0]):
   for j in range(5):
     kc_rect_angle[:,j] = np.dot(R1, kc_rect[:,j])
     cargo_rect_angle[:,j] = np.dot(R2, cargo_rect[:,j])
-  area = plt.plot(area_rect[0], area_rect[1], color='k')
-  rack = plt.plot(rack_rect[0], rack_rect[1], color='m')
-  kc = plt.fill(kc_rect_angle[0]+x[i], kc_rect_angle[1]+y[i], color='b')
-  cargo = plt.fill(cargo_rect_angle[0]+x[i], cargo_rect_angle[1]+y[i], color='r')
-  ims.append(area+kc+cargo)
+  if i % round(0.1/dt) == 0:
+    area = plt.plot(area_rect[0], area_rect[1], color='k')
+    rack = plt.plot(rack_rect[0], rack_rect[1], color='m')
+    kc = plt.fill(kc_rect_angle[0]+x[i], kc_rect_angle[1]+y[i], color='b')
+    cargo = plt.fill(cargo_rect_angle[0]+x[i], cargo_rect_angle[1]+y[i], color='r')
+    ims.append(area+kc+cargo)
   cargo_rear_right[:,i] = np.array([cargo_rect_angle[0,0]+x[i], cargo_rect_angle[1,0]+y[i]])
   dist[i] = sqrt((5.875-cargo_rear_right[0,i])**2 + (1.9-cargo_rear_right[1,i])**2)
 
-ani = animation.ArtistAnimation(fig, ims, interval=dt*1000/2, repeat=False)
+print("minimun distance: {:.2f}".format(min(dist)))
+print("stop point: {:.2f}".format(stop_dist - 0.71))
+ani = animation.ArtistAnimation(fig, ims, interval=0.1*1000/2, repeat=False)
 plt.show()
 
-# print(x)
-# print(z)
-# print(y)
