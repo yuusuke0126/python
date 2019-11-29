@@ -7,15 +7,17 @@ import time
 from math import sin, cos, asin, acos, pi, sqrt
 from scipy.integrate import odeint
 
+plt.close('all')
 c_dist = 1.22 # distance between keycart wheel center and cargo wheel center
 
 angle = pi/4
-r = 1.22 / sin(angle)
-kc2wall = 0.72
-stop_dist = kc2wall + r - c_dist
+# r = c_dist / sin(angle)
+r = 1.2
+kc2wall = 0.74
+stop_dist = kc2wall + r * (1 - sin(angle))
 max_x = 0.5
 max_z = 0.5
-dt = 0.01
+dt = 0.002
 
 x = np.arange(1.7, 8.0 - stop_dist, dt*max_x)
 y = (5.0 - kc2wall) * np.ones(x.shape)
@@ -107,7 +109,7 @@ theta = []
 theta = np.append(theta, 0)
 p = 1.22
 
-for t in range(x.shape[0]):
+for t in range(x.shape[0]-1):
   thetad = 1.0 / p * (-xd[t] * sin(theta[-1]) + yd[t] * cos(theta[-1]))
   theta = np.append(theta, theta[-1]+thetad*dt)
 
@@ -145,12 +147,13 @@ for i in range(x.shape[0]):
     rack = plt.plot(rack_rect[0], rack_rect[1], color='m')
     kc = plt.fill(kc_rect_angle[0]+x[i], kc_rect_angle[1]+y[i], color='b')
     cargo = plt.fill(cargo_rect_angle[0]+x[i], cargo_rect_angle[1]+y[i], color='r')
-    ims.append(area+kc+cargo)
+    connect = plt.plot([x[i], x[i]+np.average(cargo_rect_angle[0,1:3])],[y[i], y[i]+np.average(cargo_rect_angle[1,1:3])], linewidth=3.0, color='k')
+    ims.append(area+kc+cargo+connect)
   cargo_rear_right[:,i] = np.array([cargo_rect_angle[0,0]+x[i], cargo_rect_angle[1,0]+y[i]])
   dist[i] = sqrt((5.875-cargo_rear_right[0,i])**2 + (1.9-cargo_rear_right[1,i])**2)
 
 print("minimun distance: {:.2f}".format(min(dist)))
 print("stop point: {:.2f}".format(stop_dist - 0.71))
 ani = animation.ArtistAnimation(fig, ims, interval=0.1*1000/2, repeat=False)
-plt.show()
+plt.show(block=False)
 
