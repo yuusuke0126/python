@@ -10,9 +10,9 @@ from scipy.integrate import odeint
 plt.close('all')
 c_dist = 1.22 # distance between keycart wheel center and cargo wheel center
 
-angle = pi/4
-# r = c_dist / sin(angle)
-r = 1.2
+angle = 40*pi/180
+r = c_dist / sin(angle)
+# r = 1.2
 kc2wall = 0.74
 stop_dist = kc2wall + r * (1 - sin(angle))
 max_x = 0.5
@@ -107,10 +107,9 @@ zd = np.append(zd, 0)
 
 theta = []
 theta = np.append(theta, 0)
-p = 1.22
 
 for t in range(x.shape[0]-1):
-  thetad = 1.0 / p * (-xd[t] * sin(theta[-1]) + yd[t] * cos(theta[-1]))
+  thetad = 1.0 / c_dist * (-xd[t] * sin(theta[-1]) + yd[t] * cos(theta[-1]))
   theta = np.append(theta, theta[-1]+thetad*dt)
 
 
@@ -152,8 +151,10 @@ for i in range(x.shape[0]):
   cargo_rear_right[:,i] = np.array([cargo_rect_angle[0,0]+x[i], cargo_rect_angle[1,0]+y[i]])
   dist[i] = sqrt((5.875-cargo_rear_right[0,i])**2 + (1.9-cargo_rear_right[1,i])**2)
 
-print("minimun distance: {:.2f}".format(min(dist)))
-print("stop point: {:.2f}".format(stop_dist - 0.71))
+print("minimun distance: {:.2f} [m]".format(min(dist)))
+print("distance from wall: {:.2f} [m]".format(kc2wall-0.33))
+print("stop point: {:.2f} [m]".format(stop_dist - 0.71))
+print("max angle: {:.1f} [deg]".format(max(abs(theta-z)*180/pi)))
 ani = animation.ArtistAnimation(fig, ims, interval=0.1*1000/2, repeat=False)
 plt.show(block=False)
 
