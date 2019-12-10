@@ -10,7 +10,7 @@ from scipy.integrate import odeint
 plt.close('all')
 c_dist = 1.22 # distance between keycart wheel center and cargo wheel center
 
-angle = 40*pi/180
+angle = 45*pi/180
 r = c_dist / sin(angle)
 # r = 1.2
 kc2wall = 0.74
@@ -92,9 +92,9 @@ x = np.append(x, x_ap)
 y = np.append(y, y_ap)
 z = np.append(z, z_ap)
 
-x = np.append(x, x[-1])
-y = np.append(y, y[-1])
-z = np.append(z, z[-1])
+x = np.append(x, x[-1]*np.ones((int(round(0.1/dt))*2,)))
+y = np.append(y, y[-1]*np.ones((int(round(0.1/dt))*2,)))
+z = np.append(z, z[-1]*np.ones((int(round(0.1/dt))*2,)))
 
 xd = (x[1:] - x[0:-1]) / dt
 yd = (y[1:] - y[0:-1]) / dt
@@ -141,13 +141,30 @@ for i in range(x.shape[0]):
   for j in range(5):
     kc_rect_angle[:,j] = np.dot(R1, kc_rect[:,j])
     cargo_rect_angle[:,j] = np.dot(R2, cargo_rect[:,j])
-  if i % round(0.1/dt) == 0:
+  if i % int(round(0.1/dt)) == 0:
     area = plt.plot(area_rect[0], area_rect[1], color='k')
     rack = plt.plot(rack_rect[0], rack_rect[1], color='m')
     kc = plt.fill(kc_rect_angle[0]+x[i], kc_rect_angle[1]+y[i], color='b')
     cargo = plt.fill(cargo_rect_angle[0]+x[i], cargo_rect_angle[1]+y[i], color='r')
     connect = plt.plot([x[i], x[i]+np.average(cargo_rect_angle[0,1:3])],[y[i], y[i]+np.average(cargo_rect_angle[1,1:3])], linewidth=3.0, color='k')
-    ims.append(area+kc+cargo+connect)
+    arrs = []
+    for k in reversed(range(10)):
+      l = (i - i%int(round(0.1/dt)*5)) + k*int(round(0.1/dt))*5
+      if l > x.shape[0] - 1:
+        l = x.shape[0] - 1
+      r_v = sqrt(xd[l]**2+yd[l]**2)
+      if r_v < 0.1:
+        r_v = 0.1
+      if k==0:
+        l = i
+        r_v = sqrt(xd[l]**2+yd[l]**2)
+        if r_v < 0.1:
+          r_v = 0.1
+        arr = plt.arrow(x[l], y[l], r_v*cos(z[l]), r_v*sin(z[l]), width=0.01,head_width=0.08,head_length=0.12, color='r')
+      else:
+        arr = plt.arrow(x[l], y[l], r_v*cos(z[l]), r_v*sin(z[l]), width=0.005,head_width=0.08,head_length=0.12, color='k')
+      arrs.append(arr)
+    ims.append(area+kc+cargo+connect+arrs)
   cargo_rear_right[:,i] = np.array([cargo_rect_angle[0,0]+x[i], cargo_rect_angle[1,0]+y[i]])
   dist[i] = sqrt((5.875-cargo_rear_right[0,i])**2 + (1.9-cargo_rear_right[1,i])**2)
 
@@ -156,5 +173,6 @@ print("distance from wall: {:.2f} [m]".format(kc2wall-0.33))
 print("stop point: {:.2f} [m]".format(stop_dist - 0.71))
 print("max angle: {:.1f} [deg]".format(max(abs(theta-z)*180/pi)))
 ani = animation.ArtistAnimation(fig, ims, interval=0.1*1000/2, repeat=False)
-plt.show(block=False)
+# plt.show(block=False)
+ani.save("output.gif", writer="imagemagick")
 
