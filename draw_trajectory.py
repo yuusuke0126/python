@@ -7,14 +7,33 @@ import time
 from math import sin, cos, asin, acos, pi, sqrt
 from scipy.integrate import odeint
 
+def calc_cross_point(pointA, pointB, pointC, pointD):
+  cross_point = (0,0)
+  bunbo = (pointB[0] - pointA[0]) * (pointD[1] - pointC[1]) - (pointB[1] - pointA[1]) * (pointD[0] - pointC[0])
+  # Case in lines are parallel
+  if (bunbo == 0):
+      return False, cross_point
+  vectorAC = ((pointC[0] - pointA[0]), (pointC[1] - pointA[1]))
+  r = ((pointD[1] - pointC[1]) * vectorAC[0] - (pointD[0] - pointC[0]) * vectorAC[1]) / bunbo
+  distance = ((pointB[0] - pointA[0]) * r, (pointB[1] - pointA[1]) * r)
+  cross_point = np.array([pointA[0] + distance[0], pointA[1] + distance[1]])
+  return True, cross_point
+
+def rotate(v, theta=-np.pi/2.0):
+  rotateMat = np.array([
+      [np.cos(theta), -np.sin(theta)],
+      [np.sin(theta), np.cos(theta)],
+  ])
+  return np.dot(rotateMat, v)
+
 plt.close('all')
 c_dist = 1.22 # distance between keycart wheel center and cargo wheel center
 
 # angle = 45*pi/180
 angle = 0
 # r = c_dist / sin(angle)
-r = 1.2
-kc2wall = 0.76
+r = 1.0
+kc2wall = 0.8
 stop_dist = kc2wall + r * (1 - sin(angle))
 max_x = 0.5
 max_z = 0.5
@@ -132,21 +151,31 @@ box1_rect = np.array([[7.55, 8.00, 8.00, 7.55, 7.55],
                       [4.55, 4.55, 5.00, 5.00, 4.55]])
 box2_rect = np.array([[7.55, 8.00, 8.00, 7.55, 7.55],
                       [0.00, 0.00, 0.45, 0.45, 0.00]])
+zed_pose = np.array([[0.55], 
+                     [0.02]])
 
 cargo_rear_right = np.zeros([2,x.shape[0]])
 kc_front_left = np.zeros([2,x.shape[0]])
 dist = np.zeros(x.shape)
+zed_dist1 = np.zeros(x.shape)
 
 for i in range(x.shape[0]):
   kc_rect_angle = np.zeros([2,5])
   cargo_rect_angle = np.zeros([2,5])
-  R1 = np.array([[cos(z[i]), -sin(z[i])],
-                [sin(z[i]),  cos(z[i])]])
-  R2 = np.array([[cos(theta[i]), -sin(theta[i])],
-                 [sin(theta[i]),  cos(theta[i])]])
-  for j in range(5):
-    kc_rect_angle[:,j] = np.dot(R1, kc_rect[:,j])
-    cargo_rect_angle[:,j] = np.dot(R2, cargo_rect[:,j])
+  kc_rect_angle = rotate(kc_rect, z[i])
+  cargo_rect_angle = rotate(cargo_rect, theta[i])
+  zed_position = np.array([[x[i]], [y[i]]]) + rotate(zed_pose, z[i])
+  zed_fov1 = zed_position + rotate(np.array([[1.0],[0.0]]), z[i]+np.arctan(0.8/1.5))
+  zed_dists = []
+  for j in range(3):
+    flag, fov = calc_cross_point(zed_position,zed_fov1,area_rect[:,j],area_rect[:,j+1])
+    if flag:
+      zed_dists.append(np.linalg.norm(zed_position-fov))
+  # flag1, fov11 = calc_cross_point(zed_position,zed_fov1,area_rect[:,1],area_rect[:,2])
+  # flag2, fov12 = calc_cross_point(zed_position,zed_fov1,area_rect[:,2],area_rect[:,3])
+  # flag3, fov13 = calc_cross_point(zed_position,zed_fov1,area_rect[:,0],area_rect[:,1])
+
+  zed_dist1[i] = min(zed_dists)
   if i % int(round(0.1/dt)) == 0:
     area = plt.plot(area_rect[0], area_rect[1], color='k')
     rack = plt.plot(rack_rect[0], rack_rect[1], color='m')
