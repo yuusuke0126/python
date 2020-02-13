@@ -22,7 +22,9 @@ def rotate(v, theta=-np.pi/2.0):
   return np.dot(rotateMat, v)
 
 
-dist_wall = 0.76
+# dist_wall = 1.0
+dist_wall = 0.8
+# r = 0
 r = 1.2
 dist_stop = dist_wall + r
 dist_on_curve = dist_wall + r * (1.0 - np.cos(np.pi/4.0))
