@@ -79,6 +79,17 @@ goal_angle = np.array([
   [np.sin(theta[1]/2.0), np.cos(theta[1]/2.0)]
   ])
 
+for i in range(4):
+  print("""      -
+        position: {x: %1.2f, y: %1.2f, z: 0}
+        orientation: {x: 0, y: 0, z: 0, w: 0}""" % (check_points[i,0],check_points[i,1]))
+
+for i in range(4):
+  print("""
+    Goal id: %d
+      position: {x: %1.2f, y: %1.2f, z: 0.0}
+      orientation: {x: 0.0, y: 0.0, z: %f, w: %f}""" % (i, goal_points[i,0], goal_points[i,1], goal_angle[i,0], goal_angle[i,1]))
+
 check_points = np.append(check_points, np.reshape(check_points[0], (1,2)), axis=0)
 plt.plot(area[:,0], area[:,1], 'k')
 plt.plot(check_points[:,0],check_points[:,1], '-ro')
