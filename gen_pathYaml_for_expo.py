@@ -27,7 +27,7 @@ r = 1.2
 dist_checkpoint = 1.0
 dist_stop = dist_wall + r
 dist_on_curve = dist_wall + r * (1.0 - np.cos(np.pi/4.0))
-dist_goal = 0.5
+dist_goal = 1.0
 
 with open('sample.csv') as f:
   reader = csv.reader(f)
