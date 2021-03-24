@@ -5,7 +5,7 @@ import matplotlib.patches as patches
 import time
 
 from math import sin, cos, asin, acos, pi, sqrt
-from scipy.integrate import odeint
+# from scipy.integrate import odeint
 
 def calc_cross_point(pointA, pointB, pointC, pointD):
   cross_point = (0,0)
