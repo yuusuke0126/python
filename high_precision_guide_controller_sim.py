@@ -20,6 +20,7 @@ class WaypointTracer():
         Xcp = X[:2] + np.array([np.cos(t), np.sin(t)]) * self.d
         u = - 0.5 * np.dot(np.linalg.inv(self.calc_B(t)), np.dot(self.K, Xcp))
         u = self.limit_input(u)
+        u = self.limit_acceleration(u)
         return u
 
     def calc_B(self, t):
@@ -30,7 +31,7 @@ class WaypointTracer():
     def limit_input(self, u):
         v_max = 0.1
         w_max = 0.3
-        v = u[0]
+        v = u[0]/ 1.5
         w = u[1]
         if abs(v) > v_max:
             w = w / abs(v) * v_max
@@ -48,30 +49,75 @@ class WaypointTracer():
         v_pre = self.u_pre[0]
         w_pre = self.u_pre[1]
         if abs(v-v_pre) > v_acc_max * self.dt:
+            print("v_acc_limitation!        v: %2.4f, vp: %2.4f, w: %2.4f, wp: %2.4f" %(v, v_pre, w, w_pre))
             if v > v_pre:
                 v_new = v_pre + v_acc_max * self.dt
             else:
                 v_new = v_pre - v_acc_max * self.dt
-            w = w * abs(v_new / v)
+            if v != 0.0:
+                w = w * abs(v_new / v)
             v = v_new
+            v, w = self.limit_input(np.array([v, w]))
+            print("v_acc_limitation result! v: %2.4f, vp: %2.4f, w: %2.4f, wp: %2.4f" %(v, v_pre, w, w_pre))
         if abs(w-w_pre) > w_acc_max * self.dt:
+            print("w_acc_limitation!        v: %2.4f, vp: %2.4f, w: %2.4f, wp: %2.4f" %(v, v_pre, w, w_pre))
             if w > w_pre:
                 w_new = w_pre + w_acc_max * self.dt
             else:
                 w_new = w_pre - w_acc_max * self.dt
-            v = v * abs(w_new / w)
+            if w != 0.0:
+                v = v * abs(w_new / w)
             w = w_new
+            v, w = self.limit_input(np.array([v, w]))
+            print("w_acc_limitation result! v: %2.4f, vp: %2.4f, w: %2.4f, wp: %2.4f" %(v, v_pre, w, w_pre))
         self.u_pre = np.array([v, w])
         return self.u_pre
 
 class WaypointTracerEx(WaypointTracer):
     def calc_u(self, X: np.ndarray) -> np.ndarray:
         t = X[2]
-        Xcp = X[:2] + np.array([np.cos(t), np.sin(t)]) * self.d / 1.5
+        Xcp = X[:2] + np.array([np.cos(t), np.sin(t)]) * self.d / 1.5 * 0
         u = - 0.2 * np.dot(np.linalg.inv(self.calc_B(t)), np.dot(self.K, Xcp))
         u = self.limit_input(u)
         u = self.limit_acceleration(u)
         return u
+
+class WaypointTracerSwitch(WaypointTracerEx):
+    def __init__(self, dt) -> None:
+        super().__init__(dt=dt)
+        self.mode = 0
+
+    def calc_u(self, X: np.ndarray) -> np.ndarray:
+        t = X[2]
+        Xcp = X[:2] + np.array([np.cos(t), np.sin(t)]) * self.d / 1.5
+        if self.mode == 0:
+            if (np.linalg.norm(Xcp) > 0.1 or self.check_finish(X)) and X[0] > abs(X[1]):
+                return super().calc_u(X)
+            else:
+                print("Reverse mode start!")
+                self.mode = 1
+                self.d *= -1
+                return self.calc_u_reverse(X)
+        else:
+            if np.linalg.norm(Xcp - np.array([1.0, 0])) < 0.1:
+                print("Reverse mode finish!")
+                self.mode = 0
+                self.d *= -1
+                return super().calc_u(X)
+            else:
+                return self.calc_u_reverse(X)
+
+    def calc_u_reverse(self, X: np.ndarray) -> np.ndarray:
+        return super().calc_u(X - np.array([1.0, 0, 0]))
+
+    def check_finish(self, X):
+        y_tolerance = 0.05
+        t_tolerance = np.pi / 36.0
+        if abs(X[1]) < y_tolerance and abs(X[2]) < t_tolerance:
+            return True
+        else:
+            print("y: %2.4f [m], t: %2.4f [deg]" % (X[1], X[2]*180/np.pi))
+            return False
 
 class SMC_Cotnroller():
     def __init__(self) -> None:
@@ -106,6 +152,8 @@ class SMC_Cotnroller():
                     [0, 1]])
         return B
 
+def rand(n=2, s=0.1):
+    return (np.random.rand(n)-0.5)*s
 
 def calc_B(t):
     B = np.array([[np.cos(t), 0],
@@ -132,29 +180,28 @@ def check_finish(X):
     if abs(X[1]) < y_tolerance and abs(X[2] % (2*np.pi)) < t_tolerance:
         return True
     else:
+        print("y: %2.4f [m], t: %2.4f [deg]" % (X[1], X[2]*180/np.pi))
         return False
 
 if __name__ == '__main__':
     dt = 0.1
-    T = 150.0
+    T = 40.0
     t = np.arange(0.0, T, dt)
     t_num = len(t)
     controller = WaypointTracerEx(dt)
-    X0 = np.array([2.0, 0.30, 0.0])
+    X0 = np.array([1.0, 1.0, 0.0])
     X = np.zeros((3, t_num))
     X[:,0] = X0
     U = np.zeros((2, t_num))
     for i in range(t_num-1):
-        U[:,i] = controller.calc_u(X[:,i])
-        X[:,i+1] = update_X(X[:,i], U[:,i], dt)
-        # if check_finish(X[:,i+1]):
-        #     print("Break!")
-        #     X = np.delete(X, np.s_[i+2:], 1)
-        #     U = np.delete(U, np.s_[i+2:], 1)
-        #     t = np.delete(t, np.s_[i+2:], 0)
-        #     break
+        theta = X[2,i] % (2*np.pi)
+        if theta > np.pi:
+            theta -= 2*np.pi
+        X[2,i] = theta
+        U[:,i] = controller.calc_u(X[:,i]+rand(n=3,s=0.01)*0)
+        X[:,i+1] = update_X(X[:,i], U[:,i]+rand(s=0.005)*0, dt)
     theta = X[2,:]
-    Xcp = X[:2,:] + np.array([np.cos(theta), np.sin(theta)]) * -0.15
+    Xcp = X[:2,:] + np.array([np.cos(theta), np.sin(theta)]) * -0.15 / 1.5
     
     plt.close('all')
     tb_rect = np.array([[-0.2, 0.2, 0.2, -0.2, -0.2],
@@ -169,7 +216,7 @@ if __name__ == '__main__':
             tb_rect_a = rotate(tb_rect, X[2,i])
             area = plt.plot(area_rect[0,:], area_rect[1,:], color='w')
             tb = plt.fill(tb_rect_a[0,:]+X[0,i], tb_rect_a[1,:]+X[1,i], color='b')
-            traj = plt.plot(X[0,:i], X[1,:i], color='k')
+            traj = plt.plot(Xcp[0,:i], Xcp[1,:i], color='k')
             goal = plt.plot(0.0, 0.0, marker='*', color='k')
             arr = plt.arrow(X[0,i], X[1,i], 0.4*np.cos(X[2,i]), 0.4*np.sin(X[2,i]), width=0.01,head_width=0.08,head_length=0.12, color='r')
             arrs = [arr]
@@ -177,6 +224,7 @@ if __name__ == '__main__':
     ani = animation.ArtistAnimation(fig, ims, interval=0.1*1000/2, repeat=False)
     plt.axis('equal')
     plt.show(block=False)
+    # ani.save("output.gif", writer="imagemagick")
     print("Simulation finished!")
     print("x_error: %2.4f [m], y_error: %2.4f [m], t_error: %2.4f [deg]" % (X[0,-1], X[1,-1], X[2,-1]*180/np.pi))
     fig2 = plt.figure()
