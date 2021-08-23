@@ -177,8 +177,8 @@ if __name__ == '__main__':
     t = np.arange(0.0, T, dt)
     t_num = len(t)
     controller = WaypointTracerSwitch(dt)
-    X0 = np.array([1.50, 1.40, 0.0])
-    Xd = np.array([1.0, -1.0, np.pi/4])
+    X0 = np.array([1.50, 0.0001, np.pi+0.001])
+    Xd = np.array([0.0, -0.0, np.pi/4*0])
     X = np.zeros((3, t_num))
     E = np.zeros((3, t_num))
     X[:,0] = X0

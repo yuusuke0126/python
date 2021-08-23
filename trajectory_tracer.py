@@ -23,13 +23,15 @@ def check_status(z, checkpoints, status):
   return new_status
 
 def calc_input(z, theta, checkpoint):
-  # d = 0.1  # distance between center point of drive wheels and control point
+  d = 0.1  # distance between center point of drive wheels and control point
   v_max = 0.5
   w_max = 1.5
   B_inv = np.array([[d*np.cos(theta), d*np.sin(theta)], 
                     [-np.sin(theta),  np.cos(theta)]])
+  K = np.array([[1.0, 0.0],
+                [0.0, 5.0]])
   e = z - checkpoint
-  u = -1 * np.dot(B_inv, e)
+  u = -1 * np.dot(B_inv, np.dot(K, e))
   if u[0] != 0:
     u[1] = u[1] / abs(u[0]) * v_max
     u[0] = u[0] / abs(u[0]) * v_max
@@ -68,16 +70,19 @@ plt.close('all')
 
 d = 0.5
 
-z = np.zeros(2)
-theta = 0.0
+# z = np.zeros(2)
+theta = np.pi
 u = np.zeros(2)
+z = np.array([1.0, 3.0])
 
 right_shift = -1.5
 length = 6.5
 # checkpoints = np.array([[0.0, abs(right_shift), length-abs(right_shift), length, 7, 5], 
 #                         [0.0,     -right_shift,            -right_shift,    0.0, 3, 5]])
-checkpoints = np.array([[0.0, 2, 5, 6.5, 6.8, 7.0,  7, 0], 
-                        [0.0, 0, 0, 0.2, 0.3, 0.7, 4, 4]])
+# checkpoints = np.array([[0.0, 2, 5, 6.5, 6.8, 7.0,  7, 0], 
+#                         [0.0, 0, 0, 0.2, 0.3, 0.7, 4, 4]])
+checkpoints = np.array([[2.0, 0.0],
+                        [3.0, 0.0]])
 
 dt = 0.05
 max_T = 100.0
@@ -95,7 +100,7 @@ Z[:,0] = z; Theta[0] = theta; U[:,0] = u
 i=0
 for t in T:
   u = calc_input(z, theta, checkpoints[:,status])
-  u = input_smoother(u, U[:,i], dt)
+  # u = input_smoother(u, U[:,i], dt)
   z, theta = update_status(z, theta, u, dt)
   U[:,i+1] = u; Z[:,i+1] = z; Theta[i+1] = theta
   status = check_status(z, checkpoints, status)
