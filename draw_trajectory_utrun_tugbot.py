@@ -7,29 +7,6 @@ import time
 from math import sin, cos, asin, acos, pi, sqrt, tan
 # from scipy.integrate import odeint
 
-motion_plan = [
-  {
-    "type" : "curve",
-    "goal" : 23.3*pi/180,
-    "curve_radius" : 2.0  # -1.7
-  },
-  {
-    "type" : "spin",
-    "goal" : 40.4*pi/180,
-    "curve_radius" : -1.0
-  },
-  {
-    "type" : "curve",
-    "goal" : pi/2 - 17.1*pi/180,
-    "curve_radius" : -3.0  # -1.7
-  },
-  {
-    "type" : "linear",
-    "goal" : 3.0,  # 2.55,
-    "curve_radius" : 0.0
-  }
-]
-
 def calc_cross_point(pointA, pointB, pointC, pointD):
   cross_point = (0,0)
   bunbo = (pointB[0] - pointA[0]) * (pointD[1] - pointC[1]) - (pointB[1] - pointA[1]) * (pointD[0] - pointC[0])
@@ -65,17 +42,17 @@ def update_status(t, z, p, theta, phi, v=0.5, w=0.0):
 
 plt.close('all')
 p_dist = 0.0  # distance between tugbot wheel center and pivot point of gripper
-# c_dist = 0.45 + 1.23/2.0  # distance between pivot point of gripper and cargo wheel center, case of 6 wheels cart
-c_dist = 0.45 + 1.0 + 0.45 - 0.07  # distance between pivot point of gripper and cargo wheel center, case of nisshin seifun cart
+c_dist = 0.45 + 1.23/2.0  # distance between pivot point of gripper and cargo wheel center, case of 6 wheels cart
+# c_dist = 0.45 + 1.0 + 0.45 - 0.07  # distance between pivot point of gripper and cargo wheel center, case of nisshin seifun cart
 # c_dist = 0.15  # distance between pivot point of keyconnect and cargo wheel center, case of front wheels free
 # c_dist = 1.25  # distance between pivot point of keyconnect and cargo wheel center, case of rear wheels free
 
-# cf_dist = 0.45  # distance between pivot point of gripper and cart front edge
-cf_dist = 0.45 + 0.45  # distance between pivot point of gripper and cart front edge for nisshin seifun
+cf_dist = 0.45  # distance between pivot point of gripper and cart front edge
+# cf_dist = 0.45 + 0.45  # distance between pivot point of gripper and cart front edge for nisshin seifun
 cart_length = 1.27  # for 6 wheel cart
 cart_width = 0.423  # for 6 wheel cart
-cart_length = 1.513  # for nisshin seifun
-cart_width = 0.4  # for nisshin seifun
+# cart_length = 1.513  # for nisshin seifun
+# cart_width = 0.4  # for nisshin seifun
 
 cr_dist = -(cf_dist + cart_length)  # distance between pivot point of gripper and cart rear edge
 cw_2 = cart_width / 2.0
@@ -83,34 +60,54 @@ cw_2 = cart_width / 2.0
 max_angle = 60.0*pi/180.0
 a = pi/2.0 - max_angle
 
-x0 = -0.125  # 1.1  # initial x of tugbot wheel center
-y0 = 0.125  # -1.8  # initial y of tugbot wheel center
+# motion_plan = [
+#   {
+#     "type" : "curve",
+#     "goal" : 23.3*pi/180,
+#     "curve_radius" : 2.0  # -1.7
+#   },
+#   {
+#     "type" : "spin",
+#     "goal" : 40.4*pi/180,
+#     "curve_radius" : -1.0
+#   },
+#   {
+#     "type" : "curve",
+#     "goal" : pi/2 - 17.1*pi/180,
+#     "curve_radius" : -3.0  # -1.7
+#   },
+#   {
+#     "type" : "linear",
+#     "goal" : 3.0,  # 2.55,
+#     "curve_radius" : 0.0
+#   }
+# ]  # for nisshin seifun
 
-init_theta = pi/2 # initial tugbot angle
+motion_plan = [
+  {
+    "type" : "curve",
+    "goal" : pi/2,
+    "curve_radius" : -1.7
+  },
+  {
+    "type" : "linear",
+    "goal" : 2.55,
+    "curve_radius" : 0.0
+  }
+]
+
+x0 = 0.0  # initial x of tugbot wheel center
+y0 = 0.0  # initial y of tugbot wheel center
+
+init_theta = 0.0 # initial tugbot angle
 # init_theta = max_angle # initial tugbot angle
-init_phi = pi/2  # initial cargo angle
-goal_theta = 0.0
-target_dist = 2.55
-# r = c_dist*cos(a) + p_dist+tan(a)
-# r = 1.35  # curve radius, calculated by geometrical method
-r = -1.7  # curve radius, calculated by geometrical method
-# r = -2.9  # curve radius, calculated by geometrical method for nisshin seifun
-v = 0.5  # linear velocity
-w = v / r  # angular velocity
+init_phi = 0.0  # initial cargo angle
 
 dt = 0.002
-
-# curve_step = int(abs((goal_theta - init_theta) / (w*dt))) + 10
-# straight_step = int(abs(target_dist / (v*dt))) + 10
-# step_num = curve_step + straight_step
 z = np.zeros((2,1))
 p = np.zeros((2,1))
 theta = np.zeros(1)
 phi = np.zeros(1)
-
-# x[0], y[0], theta[0], phi[0] = x0, y0, init_theta, init_phi
-# px[0] = x[0] + (-p_dist) * cos(theta[0])
-# py[0] = y[0] + (-p_dist) * sin(theta[0])
 
 z[0,0], z[1,0], theta[0], phi[0] = x0, y0, init_theta, init_phi
 p[0,0] = z[0,0] + (-p_dist) * cos(theta[0])
@@ -154,24 +151,20 @@ for i in range(len(motion_plan)):
       v = r * w
     else:
       v = 0.0
-
   t = current_t + step_num - 1
   update_status(t-1, z, p, theta, phi, v, w)
-
-# t = range(x.shape[0])
-# theta_t = odeint(func, theta0, t, args=(xd, yd))
 
 fig = plt.figure()
 ims = []
 
 kc_rect = np.array([[-0.22,  0.22, 0.22, -0.22, -0.22],
                     [-0.30, -0.30, 0.30,  0.30, -0.30]])
-# area_rect = np.array([[-4.0, 2.2,  2.2,  0.6,  0.6, -4.0], 
-#                       [ 0.5, 0.5, -8.0, -8.0, -1.5, -1.5]])  # for narrow turn
+area_rect = np.array([[-4.0, 2.2,  2.2,  0.6,  0.6, -4.0], 
+                      [ 0.5, 0.5, -8.0, -8.0, -1.5, -1.5]])  # for narrow turn
 # area_rect = np.array([[-4.0,  2.7, 2.7, -4.0, -4.0, 1.1, 1.1, -4.0], 
 #                       [-0.7, -0.7, 4.7,  4.7,  2.9, 2.9, 1.3, 1.3]])  # for yokado uturn
-area_rect = np.array([[-0.6, -0.6, -0.89, -0.89, 7.0, 7.0, 2.75,  2.75, 2.05, 2.05], 
-                      [-2.0,  0.4,   0.4,  3.5, 3.5, 2.28, 2.28, 0.85, 0.85, -2.0]])  # area for nisshin seifun
+# area_rect = np.array([[-0.6, -0.6, -0.89, -0.89, 7.0, 7.0, 2.75,  2.75, 2.05, 2.05], 
+#                       [-2.0,  0.4,   0.4,  3.5, 3.5, 2.28, 2.28, 0.85, 0.85, -2.0]])  # area for nisshin seifun
 # cargo_rect = np.array([[-1.90, -0.90, -0.90, -1.90, -1.90, -2.125, -2.125, -2.413, -2.413, -2.125, -2.125,  -1.90, -1.90],
 #                        [-0.20, -0.20,  0.20,  0.20, 0.125,  0.125,  0.060,  0.060, -0.060, -0.060, -0.125, -0.125, -0.20]])  # case for nishsin seifun cart
 cargo_rect = np.array([[cr_dist, -cf_dist, -cf_dist, cr_dist, cr_dist],
@@ -221,7 +214,7 @@ for i in range(z.shape[1]):
   zed_dist1[i] = min(zed_dists)
   cargo_rear_right[:,i] = cargo_rect_angle[:,0] + z[:,i]  # np.array([cargo_rect_angle[0,0]+z[0,i], cargo_rect_angle[1,0]+z[1,i]])
   kc_front_left[:,i] = kc_rect_angle[:,2] + z[:,i]  # np.array([kc_rect_angle[0,2]+z[0,i], kc_rect_angle[1,2]+z[1,i]])
-  dist[i] = np.linalg.norm(cargo_rear_right[:,i] - area_rect[:,6])
+  dist[i] = np.linalg.norm(cargo_rear_right[:,i] - area_rect[:,2])
   x_min_i = min(min(kc_rect_angle[0]) + z[0,i], min(cargo_rect_angle[0]) + p[0,i])
   x_max_i = max(max(kc_rect_angle[0]) + z[0,i], max(cargo_rect_angle[0]) + p[0,i])
   y_min_i = min(min(kc_rect_angle[1]) + z[1,i], min(cargo_rect_angle[1]) + p[1,i])
