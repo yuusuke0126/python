@@ -60,6 +60,7 @@ p[0,0] = z[0,0] + (-p_dist) * cos(theta[0])
 p[1,0] = z[1,0] + (-p_dist) * sin(theta[0])
 
 dt = 0.002
+print("Start simulation...")
 for i in range(len(motion_plan)):
   motion_type = motion_plan[i]["type"]
   goal = motion_plan[i]["goal"]
@@ -103,6 +104,9 @@ for i in range(len(motion_plan)):
   t = current_t + step_num - 1
   update_status(t-1, z, p, theta, phi, v, w)
 
+print("Simulation finished!")
+
+print("Start analysis...")
 fig, ax = plt.subplots()
 ims = []
 with open('config/areas/' + area_file_name + '.csv') as file:
@@ -202,9 +206,12 @@ T = np.linspace(0.0, stop_t, len(dist))
 dist = np.sqrt(dist)
 dist_min = np.sqrt(dist_min)
 
+print("Analysis finished!")
+
 print("minimum distance between robot/cargo to wall: {:.2f} [m]".format(dist_min))
 print("x_dist: %1.2f [m], y_dist: %1.2f [m]" % (x_max - x_min, y_max - y_min))
 print("max angle: %1.2f [deg]" % (max(abs(theta-phi)*180/pi)))
+print("Making animation...")
 ani = animation.ArtistAnimation(fig, ims, interval=0.1*1000/2, repeat=False)
 plt.axis('equal')
 plt.show(block=True)
