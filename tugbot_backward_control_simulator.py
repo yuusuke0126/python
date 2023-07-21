@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as patches
+from matplotlib import cm
 import time, yaml
 import tqdm
 from test_module import segment_distance_segment, rotate
@@ -47,7 +48,7 @@ def calc_B12(phi):
 
 def calc_input(z, p, theta, phi):
   v = -0.3
-  # phi += np.random.randn()*0.01
+  phi += np.random.randn()*0.01
   angle =  theta - phi
   if abs(sin(angle)) > 0.0001:
     r = D / sin(angle)
@@ -56,6 +57,8 @@ def calc_input(z, p, theta, phi):
     w = 0.0
   zc = z - (d+D) * np.array([cos(phi), sin(phi)])
   e = zc - zcd
+  if e[0] < 3.0:
+    e[0] = 3.0
   v_r = - np.dot(calc_B12(phi), np.dot(Kp, e))
   vx = v_r[0]; vy = v_r[1]
   theta_d = np.arctan2(vy, vx) + pi
@@ -69,6 +72,22 @@ def calc_input(z, p, theta, phi):
     w += -et
   return v, w, theta_d
 
+def calc_limited_input(u_pre, v, w, acc_v, acc_w, dt=0.002):
+  vp, wp = u_pre
+  v = vp + np.sign(v - vp) * acc_v * dt
+  w = wp + np.sign(w - wp) * acc_w * dt
+  return v, w
+
+def calc_acceleration(u_pre, v, w, sampling_t=0.05):
+  acc_v = 0.3
+  acc_w = 1.0
+  vp, wp = u_pre
+  if abs(v - vp) < acc_v * sampling_t:
+    acc_v = abs(v - vp) / sampling_t
+  if abs(w - wp) < acc_w * sampling_t:
+    acc_w = abs(w - wp) / sampling_t
+  return acc_v, acc_w
+
 def check_finish(z, phi):
   zc = z - (d+D) * np.array([cos(phi), sin(phi)])
   e = zc - zcd
@@ -77,7 +96,7 @@ def check_finish(z, phi):
   else:
     return False, abs(e[0]) - 0.1
 
-config_file_name = "EV_stab"
+config_file_name = "EV_stab2"
 area_file_name = "EV_back"
 print(config_file_name + "\n" + area_file_name)
 SAVE_FLAG = True
@@ -144,9 +163,11 @@ for t in range(t_num-1):
     break
   if t % int(sampling_t / dt) == 0:
     v, w, theta_d = calc_input(Z[:,t], P[:,t], Theta[t], Phi[t])
-  U[:,t] = np.array([v, w])
+    acc_v, acc_w = calc_acceleration(U[:,t], v, w, sampling_t)
+  v2, w2 = calc_limited_input(U[:,t], v, w, acc_v, acc_w, dt)
+  U[:,t+1] = np.array([v2, w2])
   Theta_d[t] = theta_d
-  update_status(t, Z, P, Theta, Phi, v, w)
+  update_status(t, Z, P, Theta, Phi, v2, w2)
 
 print("\nSimulation finished!")
 
@@ -213,12 +234,17 @@ ani = animation.ArtistAnimation(fig, ims, interval=0.1*1000/2, repeat=False)
 plt.axis('equal')
 plt.show(block=True)
 fig, axes = plt.subplots(2,2, tight_layout=True)
-axes[0,0].plot(T, E[0,:], label="Ex [m]")
-axes[0,0].plot(T, E[1,:], label="Ey [m]")
+ax2 = axes[0,0].twinx()
+axes[0,0].plot(T, E[1,:], label="Ey [m]", color=cm.Set1.colors[0])
+ax2.plot(T, Phi[:]*180/pi, label="Et [deg]", color=cm.Set1.colors[1])
 axes[0,0].set_xlabel("t [sec]")
-axes[0,0].legend()
+handler1, label1  = axes[0,0].get_legend_handles_labels()
+handler2, label2 = ax2.get_legend_handles_labels()
+axes[0,0].legend(handler1 + handler2, label1 + label2)
+axes[0,1].plot(T, U[0,:], label="Uv [m/s]")
 axes[0,1].plot(T, U[1,:], label="Uw [rad/s]")
-axes[0,1].plot(T, Ud[1,:], label="Udw [rad/s^2]")
+axes[0,1].plot(T, Ud[0,:], label="Udv [m/s^2]")
+axes[0,1].plot(T, Ud[1,:], label="Udw [rad/s^2]", alpha=0.3)
 axes[0,1].set_xlabel("t [sec]")
 axes[0,1].legend()
 axes[1,0].plot(T, Theta*180/pi, label="theta [deg]")
@@ -228,7 +254,7 @@ axes[1,0].set_xlabel("t [sec]")
 axes[1,0].legend()
 axes[1,1].plot(T, (Theta-Phi)*180/pi, label="relative angle [deg]")
 axes[1,1].set_xlabel("t [sec]")
-plt.legend()
+axes[1,1].legend()
 plt.show()
 
 if SAVE_FLAG:
