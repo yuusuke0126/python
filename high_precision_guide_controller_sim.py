@@ -235,7 +235,7 @@ if __name__ == '__main__':
     ax2.plot(t,E[1,:], label='e_y')
     ax2.plot(t,E[2,:], label='e_theta')
     plt.legend()
-    plt.show(block=False)
+    plt.show(block=True)
     # sx = np.dot(controller.S, X)
     # fig3 = plt.figure()
     # ax3 = fig3.add_subplot(111)

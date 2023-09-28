@@ -51,9 +51,30 @@ for i in range(len(t)-1):
 V[-1] = V[-2]
 A = (V[1:] - V[:-1])/dt
 
-plt.plot(t, X)
+t = linspace(0, 10, 5000)
+dt = 10.0/5000.0
+theta0 = 0.0
+dtheta0 = 1.0
+Theta = np.zeros(t.shape)
+dTheta = np.zeros(t.shape)
+
+Theta[0] = theta0
+dTheta[0] = dtheta0
+for i in range(len(t)-1):
+  dTheta[i+1] = 1.8*cos(Theta[i])
+  if abs(dTheta[i+1]) > 1.0:
+    dTheta[i+1] = dTheta[i+1] * 1.0 / abs(dTheta[i+1])
+  acc = (dTheta[i+1] - dTheta[i]) / dt
+  if abs(acc) > 1.5:
+    acc = acc * 1.5 / abs(acc)
+    dTheta[i+1] = dTheta[i] + acc * dt
+  Theta[i+1] = Theta[i] + dTheta[i]*dt
+
+ddTheta = (dTheta[1:] - dTheta[:-1])/dt
+
+plt.plot(t, Theta)
 plt.show()
-plt.plot(t, V)
+plt.plot(t, dTheta)
 plt.show()
-plt.plot(t[:-1], A)
+plt.plot(t[:-1], ddTheta)
 plt.show()

@@ -4,14 +4,12 @@ import matplotlib.animation as animation
 import matplotlib.patches as patches
 import time
 
-from math import sin, cos, asin, acos, pi, sqrt
+# from math import sin, cos, tan, asin, acos, pi, sqrt, atan, e
+from numpy import sin, cos, tan, arcsin, arccos, pi, sqrt, arctan, e
 
 t = np.arange(0,10,0.1)
-x0 = 100.0
-y0 = 20.0
+t = np.linspace(pi/2, 0)
+t1 = 2 * arctan(tan(t/2.0)/e)
 
-x = x0 * np.exp(-1*t)
-y = y0 * np.exp(-1*t)
-
-plt.plot(x,y)
+plt.plot(t*180/pi,t1*180/pi)
 plt.show()
