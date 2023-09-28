@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.patches as patches
 import time, yaml
+import tqdm
 from test_module import segment_distance_segment, rotate
 
 from math import sin, cos, asin, acos, pi, sqrt, tan
@@ -13,7 +14,10 @@ def update_status(t, z, p, theta, phi, v=0.5, w=0.0):
   thetad = w
   pxd = v*cos(theta[t]) - (-p_dist)*w*sin(theta[t])
   pyd = v*sin(theta[t]) + (-p_dist)*w*cos(theta[t])
-  phid = (-pxd * sin(phi[t]) + pyd * cos(phi[t])) / c_dist
+  if c_dist == 0.0:
+    phid = thetad
+  else:
+    phid = (-pxd * sin(phi[t]) + pyd * cos(phi[t])) / c_dist
   z[0, t+1] = z[0, t] + xd * dt
   z[1, t+1] = z[1, t] + yd * dt
   theta[t+1] = theta[t] + thetad * dt
@@ -21,8 +25,8 @@ def update_status(t, z, p, theta, phi, v=0.5, w=0.0):
   p[1, t+1] = p[1, t] + pyd * dt
   phi[t+1] = phi[t] + phid * dt
 
-config_file_name = "ebina_146x180_stab"
-area_file_name = "146x180"
+config_file_name = "nichiden_150x100_dolly"
+area_file_name = "150x100"
 print(config_file_name + "\n" + area_file_name)
 SAVE_FLAG = True
 plt.close('all')
@@ -128,7 +132,11 @@ zed_pose = np.array([[0.55],
                      [0.02]])
 connect_line = np.array([[0, -p_dist], 
                          [0, 0]])
-pivot_line = np.array([[0, -c_dist], 
+if c_dist == 0.0:
+  pivot_line = np.array([[0, -cf_dist], 
+                         [0, 0]])
+else:
+  pivot_line = np.array([[0, -c_dist], 
                          [0, 0]])
 
 cargo_rear_right = np.zeros(z.shape)
@@ -143,7 +151,7 @@ y_max = 0.0
 dist_min = -1
 t_min = None
 
-for i in range(z.shape[1]):
+for i in tqdm.tqdm(range(z.shape[1])):
   kc_rect_angle = np.zeros([2,5])
   cargo_rect_angle = np.zeros([2,5])
   kc_rect_angle = rotate(kc_rect, theta[i])
