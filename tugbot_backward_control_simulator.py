@@ -6,6 +6,7 @@ from matplotlib import cm
 import time, yaml
 import tqdm
 from test_module import segment_distance_segment, rotate
+from include.back_controller import BackController
 
 from math import sin, cos, asin, acos, pi, sqrt, tan
 
@@ -46,15 +47,10 @@ def calc_B12(phi):
                   [  c/2.0*sin_2phi, 1.0 - c + c*sin2_phi]])
   return B12
 
-def calc_input(z, p, theta, phi):
+def calc_input(z, p, theta, phi, u_pre, mode=0):
   v = -0.3
-  phi += np.random.randn()*0.01
+  phi += np.random.randn()*0.02
   angle =  theta - phi
-  if abs(sin(angle)) > 0.0001:
-    r = D / sin(angle)
-    w = v / r
-  else:
-    w = 0.0
   zc = z - (d+D) * np.array([cos(phi), sin(phi)])
   e = zc - zcd
   if e[0] < 3.0:
@@ -62,15 +58,43 @@ def calc_input(z, p, theta, phi):
   v_r = - np.dot(calc_B12(phi), np.dot(Kp, e))
   vx = v_r[0]; vy = v_r[1]
   theta_d = np.arctan2(vy, vx) + pi
+  angle2 = (theta_d - phi) % (2.0*pi)
+  if mode in [0,2]:
+    v = 0.0; w = 0.0
+    if not any(u_pre):
+      mode += 1
+    return v, w, theta_d, mode
+  if cos(angle2) < cos(pi/6.0) and mode == 1:
+    mode += 1
+    v = 0.0; w = 0.0
+    return v, w, theta_d, mode
+  elif mode == 3:
+    v = 0.3
+    if cos(angle2) > cos(10.0*pi/180.0):
+      v = 0.0; w = 0.0
+      mode = 0
+      return v, w, theta_d, mode
+    elif cos(angle2) < cos(pi*5.0/6.0):
+      theta_d += pi
+    else:
+      if sin(angle2) > 0:
+        theta_d = phi - (25.0*pi/180.0)
+      else:
+        theta_d = phi + (25.0*pi/180.0)
+  if abs(sin(angle)) > 0.0001:
+    r = D / sin(angle)
+    w = v / r
+  else:
+    w = 0.0
   et = (theta - theta_d) % (2.0*pi)
   if et > pi:
     et -= 2*pi
-  if abs(et) > 15*pi/180:
+  if abs(et) > 5.0*pi/180.0:
     w = -et
     v = 0.0
   else:
     w += -et
-  return v, w, theta_d
+  return v, w, theta_d, mode
 
 def calc_limited_input(u_pre, v, w, acc_v, acc_w, dt=0.002):
   vp, wp = u_pre
@@ -96,7 +120,7 @@ def check_finish(z, phi):
   else:
     return False, abs(e[0]) - 0.1
 
-config_file_name = "EV_stab2"
+config_file_name = "EV_stab"
 area_file_name = "EV_back"
 print(config_file_name + "\n" + area_file_name)
 SAVE_FLAG = True
@@ -145,6 +169,7 @@ print("Start simulation...")
 
 sampling_t = 0.05
 finish_flag, ex0 = check_finish(Z[:,0], Phi[0])
+mode = 0
 for t in range(t_num-1):
   Zc[:,t] = Z[:,t] - (d+D) * np.array([cos(Phi[t]), sin(Phi[t])])
   finish_flag, ex = check_finish(Z[:,t], Phi[t])
@@ -162,7 +187,7 @@ for t in range(t_num-1):
     print("\r", "progress: %3d %%, rest:  %1.2f [m] / %1.2f [m]" % (progress, ex, ex0))
     break
   if t % int(sampling_t / dt) == 0:
-    v, w, theta_d = calc_input(Z[:,t], P[:,t], Theta[t], Phi[t])
+    v, w, theta_d, mode = calc_input(Z[:,t], P[:,t], Theta[t], Phi[t], U[:,t], mode)
     acc_v, acc_w = calc_acceleration(U[:,t], v, w, sampling_t)
   v2, w2 = calc_limited_input(U[:,t], v, w, acc_v, acc_w, dt)
   U[:,t+1] = np.array([v2, w2])
