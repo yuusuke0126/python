@@ -177,6 +177,6 @@ for i in range(x.shape[0]):
 # print("max angle: {:.1f} [deg]".format(max(abs(theta-z)*180/pi)))
 ani = animation.ArtistAnimation(fig, ims, interval=0.1*1000/2, repeat=False)
 plt.axis('equal')
-plt.show(block=False)
+plt.show(block=True)
 # ani.save("output.gif", writer="imagemagick")
 
