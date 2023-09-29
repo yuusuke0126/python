@@ -18,7 +18,7 @@ class BackController():
         self.D = D
         self.c = self.D / self.d + 1.0
         self.Kp = np.array([[1.0, 0.0],
-                    [0.0, 4.0]])
+                            [0.0, 4.0]])
         self.angle_d_num = angle_d_num
         self.angle_d_i = 0
         self.angle_d_list = []
@@ -32,7 +32,7 @@ class BackController():
         return B12
 
     def add_angle_d(self, angle_d):
-        if len(angle_d) < self.angle_d_num:
+        if len(self.angle_d_list) < self.angle_d_num:
             self.angle_d_list.append(angle_d)
         else:
             self.angle_d_list[self.angle_d_i] = angle_d
@@ -50,15 +50,15 @@ class BackController():
         current_mode = mode
         e, phi = self.calc_e(z_odom, target_pose, angle)
         theta_d = self.calc_theta_d(e, phi)
-        angle_d = phi - theta_d
+        angle_d = calc_angle(phi - theta_d)
         angle_d_list = self.add_angle_d(angle_d)
-        new_mode = self.check_mode(e, angle_d_list, mode)
+        new_mode = self.check_mode(e, phi, angle_d_list, mode)
         u = np.zeros(2)
         if new_mode != mode:
             if not any([prev_v, prev_w]):
                 current_mode = new_mode
                 self.reset_angle_d()
-        else:
+        elif mode in [Mode.BACKWARD, Mode.FORWARD]:
             v = -0.1
             if abs(angle_d) > 30.0*pi/180.0:
                 angle_d = angle_d / abs(angle_d) * 30.0*pi/180.0
@@ -69,20 +69,20 @@ class BackController():
                 else:
                     angle_d = 25.0*pi/180.0
             if abs(sin(angle)) > 0.0001:
-                r = self.D / sin(angle)
+                r = -self.D / sin(angle)
                 w = v / r
             else:
                 w = 0.0
             et = (angle_d - angle) % (2.0*pi)
             if et > pi:
                 et -= 2*pi
-            if abs(et) > 5.0*pi/180.0:
+            if abs(et) > 15.0*pi/180.0:
                 w = -et*0.25
                 v = 0.0
             else:
                 w += -et*0.25
             u = np.array([v, w])
-        return u, current_mode
+        return u, current_mode, angle_d
 
     def calc_e(self, z_odom, target_pose, angle):
         z = z_odom - target_pose
@@ -107,11 +107,13 @@ class BackController():
             angle_d = sum(angle_d_list) / len(angle_d_list)
             if cos(angle_d) < cos(30.0 * pi / 180.0):
                 new_mode = Mode.FORWARD
-            elif cos(angle_d) > cos(10.0 * pi / 180.0):
+            elif cos(angle_d) > cos(10.0 * pi / 180.0) or mode == Mode.STANDBY:
                 new_mode = Mode.BACKWARD
         return new_mode
 
-    def calc_theta_d(self, e, phi):
+    def calc_theta_d(self, e_origin, phi):
+        e = np.zeros(2)
+        e[:] = e_origin[:]
         if e[0] < 3.0:
             e[0] = 3.0
         v_r = - self.calc_B12(phi) @ self.Kp @ e
@@ -125,3 +127,9 @@ def rotate(v, theta=-pi/2.0):
                            [sin(theta),  cos(theta)],
                        ])
   return np.dot(rotateMat, v)
+
+def calc_angle(theta1, theta2=0.0):
+    theta = (theta1 - theta2) % (2.0*pi)
+    if theta > pi:
+        theta -= 2*pi
+    return theta
