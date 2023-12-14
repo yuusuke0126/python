@@ -12,8 +12,8 @@ def update_status(t, z, p, theta, phi, v=0.5, w=0.0):
   xd = v*cos(theta[t])
   yd = v*sin(theta[t])
   thetad = w
-  pxd = v*cos(theta[t]) - (-p_dist)*w*sin(theta[t])
-  pyd = v*sin(theta[t]) + (-p_dist)*w*cos(theta[t])
+  pxd = xd - (-p_dist)*w*sin(theta[t])
+  pyd = yd + (-p_dist)*w*cos(theta[t])
   if c_dist == 0.0:
     phid = thetad
   else:
