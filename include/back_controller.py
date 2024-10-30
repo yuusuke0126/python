@@ -55,15 +55,15 @@ class BackController():
         new_mode = self.check_mode(e, phi, angle_d_list, mode)
         u = np.zeros(2)
         if new_mode != mode:
-            if not any([prev_v, prev_w]):
+            if max(abs(prev_v), abs(prev_w)) < 0.01:
                 current_mode = new_mode
                 self.reset_angle_d()
         elif mode in [Mode.BACKWARD, Mode.FORWARD]:
-            v = -0.1
+            v = -0.3
             if abs(angle_d) > 30.0*pi/180.0:
                 angle_d = angle_d / abs(angle_d) * 30.0*pi/180.0
-            if new_mode == Mode.FORWARD:
-                v = 0.1
+            if mode == Mode.FORWARD:
+                v = 0.3
                 if sin(angle_d) > 0:
                     angle_d = -25.0*pi/180.0
                 else:
@@ -77,10 +77,10 @@ class BackController():
             if et > pi:
                 et -= 2*pi
             if abs(et) > 15.0*pi/180.0:
-                w = -et*0.25
+                w = -et*1.0
                 v = 0.0
             else:
-                w += -et*0.25
+                w += -et*1.0
             u = np.array([v, w])
         return u, current_mode, angle_d
 
@@ -107,15 +107,15 @@ class BackController():
             angle_d = sum(angle_d_list) / len(angle_d_list)
             if cos(angle_d) < cos(30.0 * pi / 180.0):
                 new_mode = Mode.FORWARD
-            elif cos(angle_d) > cos(10.0 * pi / 180.0) or mode == Mode.STANDBY:
+            elif cos(angle_d) > cos(20.0 * pi / 180.0) or mode == Mode.STANDBY:
                 new_mode = Mode.BACKWARD
         return new_mode
 
     def calc_theta_d(self, e_origin, phi):
         e = np.zeros(2)
         e[:] = e_origin[:]
-        if e[0] < 3.0:
-            e[0] = 3.0
+        if e[0] < 1.0:
+            e[0] = 1.0
         v_r = - self.calc_B12(phi) @ self.Kp @ e
         vx = v_r[0]; vy = v_r[1]
         theta_d = np.arctan2(vy, vx) + pi

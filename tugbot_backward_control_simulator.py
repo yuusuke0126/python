@@ -6,7 +6,7 @@ from matplotlib import cm
 import time, yaml
 import tqdm
 from test_module import segment_distance_segment, rotate
-from include.back_controller import BackController
+from include.back_controller import BackController, Mode
 
 from math import sin, cos, asin, acos, pi, sqrt, tan
 
@@ -26,16 +26,6 @@ def update_status(t, Z, P, Theta, Phi, v=0.5, w=0.0):
   P[1, t+1] = P[1, t] + pyd * dt
   Phi[t+1] = Phi[t] + phid * dt
 
-margin = 0.5
-cf_dist = 0.45
-cart_length = 0.8
-d = 0.3
-D = 0.6
-c = D / d + 1.0
-
-zcd_x = margin+cf_dist+cart_length - d - D - 3.0
-zcd = np.array([zcd_x, 0.0])
-
 Kp = np.array([[1.0, 0.0],
                 [0.0, 4.0]])
 Kt = 2.0
@@ -49,7 +39,7 @@ def calc_B12(phi):
 
 def calc_input(z, p, theta, phi, u_pre, mode=0):
   v = -0.3
-  phi += np.random.randn()*0.02
+  phi += np.random.randn()*0.01
   angle =  theta - phi
   zc = z - (d+D) * np.array([cos(phi), sin(phi)])
   e = zc - zcd
@@ -104,7 +94,7 @@ def calc_limited_input(u_pre, v, w, acc_v, acc_w, dt=0.002):
 
 def calc_acceleration(u_pre, v, w, sampling_t=0.05):
   acc_v = 0.3
-  acc_w = 1.0
+  acc_w = 2.0
   vp, wp = u_pre
   if abs(v - vp) < acc_v * sampling_t:
     acc_v = abs(v - vp) / sampling_t
@@ -120,8 +110,8 @@ def check_finish(z, phi):
   else:
     return False, abs(e[0]) - 0.1
 
-config_file_name = "EV_stab"
-area_file_name = "EV_back"
+config_file_name = "ST_back2"
+area_file_name = "ST"
 print(config_file_name + "\n" + area_file_name)
 SAVE_FLAG = True
 plt.close('all')
@@ -149,8 +139,17 @@ y0 = config['y0']  # initial y of tugbot wheel center
 init_theta = config['init_theta'] * pi / 180 # initial tugbot angle
 init_phi = config['init_phi'] * pi / 180  # initial cargo angle
 
+margin = 0.1
+d = 0.3
+D = c_dist
+c = D / d + 1.0
+
+zcd_x = -1.5 + margin + cf_dist + cart_length - (d + D)
+zcd = np.array([zcd_x, 0.0])
+target_pose = np.array([zcd_x, 0.0, 0.0])
+
 dt = 0.002
-T_max = 60.0
+T_max = 120.0
 t_num = int(T_max / dt)
 
 Z = np.zeros((2,t_num))
@@ -166,16 +165,16 @@ P[0,0] = Z[0,0] + (-p_dist) * cos(Theta[0])
 P[1,0] = Z[1,0] + (-p_dist) * sin(Theta[0])
 
 print("Start simulation...")
-
+controller = BackController(d, D, 10)
 sampling_t = 0.05
 finish_flag, ex0 = check_finish(Z[:,0], Phi[0])
-mode = 0
+mode = Mode.STANDBY
 for t in range(t_num-1):
   Zc[:,t] = Z[:,t] - (d+D) * np.array([cos(Phi[t]), sin(Phi[t])])
   finish_flag, ex = check_finish(Z[:,t], Phi[t])
   if t % 500 == 0:
     progress = int((ex0-ex)/ex0*100)
-    print("\r", "progress: %3d %%, rest:  %1.2f [m] / %1.2f [m]" % (progress, ex, ex0), end="")
+    # print("\r", "progress: %3d %%, rest:  %1.2f [m] / %1.2f [m]" % (progress, ex, ex0), end="")
   if finish_flag:
     Z = np.delete(Z, np.s_[t+1:], 1)
     Zc = np.delete(Zc, np.s_[t+1:], 1)
@@ -187,12 +186,23 @@ for t in range(t_num-1):
     print("\r", "progress: %3d %%, rest:  %1.2f [m] / %1.2f [m]" % (progress, ex, ex0))
     break
   if t % int(sampling_t / dt) == 0:
-    v, w, theta_d, mode = calc_input(Z[:,t], P[:,t], Theta[t], Phi[t], U[:,t], mode)
+    z_odom = np.array([Z[0,t], Z[1,t], Theta[t]])
+    angle = (Phi[t] - Theta[t]) + np.random.randn()*0.00
+    [prev_v, prev_w] = U[:,t]
+    u, new_mode, angle_d = controller.calc_u(z_odom, target_pose, angle, prev_v, prev_w, mode)
+    if new_mode != mode:
+      print("In simulator, mode change to %s from %s" % (new_mode, mode))
+      mode = new_mode
+    v, w = u
+    theta_d = Phi[t] - angle_d
+    # v, w, theta_d, mode = calc_input(Z[:,t], P[:,t], Theta[t], Phi[t], U[:,t], mode)
     acc_v, acc_w = calc_acceleration(U[:,t], v, w, sampling_t)
   v2, w2 = calc_limited_input(U[:,t], v, w, acc_v, acc_w, dt)
   U[:,t+1] = np.array([v2, w2])
   Theta_d[t] = theta_d
   update_status(t, Z, P, Theta, Phi, v2, w2)
+
+del controller, BackController
 
 print("\nSimulation finished!")
 

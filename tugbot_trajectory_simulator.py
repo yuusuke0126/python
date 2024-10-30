@@ -25,8 +25,8 @@ def update_status(t, z, p, theta, phi, v=0.5, w=0.0):
   p[1, t+1] = p[1, t] + pyd * dt
   phi[t+1] = phi[t] + phid * dt
 
-config_file_name = "nichiden_150x100_dolly"
-area_file_name = "150x100"
+config_file_name = "copeKobe_jungleCart_tb_stab"
+area_file_name = "12x15"
 print(config_file_name + "\n" + area_file_name)
 SAVE_FLAG = True
 plt.close('all')
@@ -120,7 +120,7 @@ for i in range(area_num):
   area_rect = np.loadtxt('config/areas/' + area_file_name + '.csv', delimiter=',', skiprows=2*i, max_rows=2)
   area_rect_list.append(area_rect)
 # print(area_rect)
-kc_rect = np.array([[-0.27,  0.27, 0.27, -0.27, -0.27],
+kc_rect = np.array([[-0.27,  0.24, 0.24, -0.27, -0.27],
                     [-0.30, -0.30, 0.30,  0.30, -0.30]])  # tugbot
 # kc_rect = np.array([[-0.09,  0.61, 0.61, -0.09, -0.09],
 #                     [-0.25, -0.25, 0.25,  0.25, -0.25]])  # keycart

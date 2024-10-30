@@ -44,7 +44,7 @@ def update_status(t, z, p, p2, p3, theta, phi, phi2, phi3, v=0.5, w=0.0):
     phi3[t + 1] = phi3[t] + phi3d * dt
 
 config_file_name = "3x26_keycart_honda_3cart"  # 変更点：3台の台車を使用する設定ファイルを指定
-area_file_name = "25x25"
+area_file_name = "25x25_2"
 print(config_file_name + "\n" + area_file_name)
 SAVE_FLAG = True
 plt.close('all')
@@ -68,6 +68,7 @@ cr_dist = -(cf_dist + cart_length)  # distance between pivot point of gripper an
 cr2_dist = -(cf2_dist + cart_length)  # distance between pivot point of 2nd cart and 2nd cart rear edge
 cr3_dist = -(cf3_dist + cart_length)  # distance between pivot point of 3rd cart and 3rd cart rear edge
 cw_2 = cart_width / 2.0
+cw_2f = 0.775 / 2.0
 
 max_angle = 60.0 * pi / 180.0
 a = pi / 2.0 - max_angle
@@ -163,11 +164,11 @@ for i in range(area_num):
 kc_rect = np.array([[-0.09, 0.61, 0.61, -0.09, -0.09],
                     [-0.25, -0.25, 0.25, 0.25, -0.25]])  # keycart
 cargo_rect = np.array([[cr_dist, -cf_dist, -cf_dist, cr_dist, cr_dist],
-                       [-cw_2, -cw_2, cw_2, cw_2, -cw_2]])  # general purpose
+                       [-cw_2, -cw_2f, cw_2f, cw_2, -cw_2]])  # general purpose
 cargo2_rect = np.array([[cr2_dist, -cf2_dist, -cf2_dist, cr2_dist, cr2_dist],
-                         [-cw_2, -cw_2, cw_2, cw_2, -cw_2]])  # general purpose
+                         [-cw_2, -cw_2f, cw_2f, cw_2, -cw_2]])  # general purpose
 cargo3_rect = np.array([[cr3_dist, -cf3_dist, -cf3_dist, cr3_dist, cr3_dist],
-                         [-cw_2, -cw_2, cw_2, cw_2, -cw_2]])  # general purpose
+                         [-cw_2, -cw_2f, cw_2f, cw_2, -cw_2]])  # general purpose
 zed_pose = np.array([[0.55],
                      [0.02]])
 connect_line = np.array([[0, -p_dist],
@@ -202,6 +203,7 @@ y_min = 0.0
 y_max = 0.0
 dist_min = -1
 t_min = None
+cart_3rd_left_back = np.zeros((2,0))
 
 for i in tqdm.tqdm(range(z.shape[1])):
     kc_rect_angle = np.zeros([2, 5])
@@ -220,7 +222,7 @@ for i in tqdm.tqdm(range(z.shape[1])):
     min_point_robot = None
     min_point_area = None
     kc_z = kc_rect_angle + z[:,i:i+1]
-    cg_z = cargo_rect_angle + z[:,i:i+1]
+    cg_z = cargo3_rect_angle + p3[:,i:i+1]
     for j in range(area_num):
       area_rect = area_rect_list[j]
       edge_num = area_rect.shape[1] - 1
@@ -265,7 +267,10 @@ for i in tqdm.tqdm(range(z.shape[1])):
       for j in range(area_num):
         area = ax.plot(area_rect_list[j][0], area_rect_list[j][1], color='m')
         areas = area if areas is None else areas + area
-      im = kc+cargo+cargo2+cargo3+connect+pivot+pivot2+pivot3+areas+min_dist_line
+      c3lb = cargo3_rect_angle[:,3:4] + p3[:,i:i+1]
+      cart_3rd_left_back = np.hstack((cart_3rd_left_back, c3lb))
+      c3lb_line = ax.plot(cart_3rd_left_back[0,:], cart_3rd_left_back[1,:], color='r')
+      im = kc+cargo+cargo2+cargo3+connect+pivot+pivot2+pivot3+areas+min_dist_line+c3lb_line
       ims.append(im)
 
 t_min *= dt
