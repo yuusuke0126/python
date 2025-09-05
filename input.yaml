@@ -1,0 +1,23 @@
+closed: 0
+segments:
+- point:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  radius: 0.0
+  shift_from_centre: 0.0
+  can_overtake: 0
+- point:
+    x: 10.0
+    y: 0.0
+    z: 0.0
+  radius: 0.0
+  shift_from_centre: 0.0
+  can_overtake: 0
+- point:
+    x: 0.0
+    y: 50.0
+    z: 0.0
+  radius: 0.0
+  shift_from_centre: 0.0
+  can_overtake: 0

@@ -25,8 +25,8 @@ def update_status(t, z, p, theta, phi, v=0.5, w=0.0):
   p[1, t+1] = p[1, t] + pyd * dt
   phi[t+1] = phi[t] + phid * dt
 
-config_file_name = "copeKobe_jungleCart_tb_stab"
-area_file_name = "12x15"
+config_file_name = "175x175_tb_honda"
+area_file_name = "28x28_2"
 print(config_file_name + "\n" + area_file_name)
 SAVE_FLAG = True
 plt.close('all')

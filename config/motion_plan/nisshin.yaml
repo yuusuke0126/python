@@ -1,0 +1,13 @@
+motion_plan :
+  - type : "curve"
+    goal : 23.3
+    curve_radius : 2.0
+  - type : "spin"
+    goal : 40.4
+    curve_radius : -1.0
+  - type : "curve"
+    goal : 72.9
+    curve_radius : -3.0
+  - type : "linear"
+    goal : 3.0 
+    curve_radius : 0.0

@@ -1,0 +1,24 @@
+motion_plan:
+  - type : "linear"
+    goal : 1.1
+    curve_radius : 0.0
+  - type : "curve"
+    goal : 90.0   # degree
+    curve_radius : 2.0  # stabilizer
+    # "curve_radius" : 0.87  # rear wheel free
+  - type : "linear"
+    goal : 3.5
+    curve_radius : 0
+p_dist : 0.0  # distance between tugbot wheel center and pivot point of gripper
+c_dist : 0.85  #　distance between pivot point of gripper and cargo wheel center, case of rear wheels free
+p2_dist : 1.725  # distance between pivot point of gripper and pivot point of 2nd cart
+c2_dist : 0.225  # distance between pivot point of 2nd cart and 2nd cart wheel center
+cf_dist : 0.45  # distance between pivot point of gripper and cart front edge
+cf2_dist : 0.175  # distance between pivot point of 2nd cart and 2nd cart front edge
+cart_length : 1.1
+cart_width : 0.8
+x0 : 0.0  # initial x of tugbot wheel center
+y0 : 0.1  # initial y of tugbot wheel center
+init_theta : 0.0 # initial tugbot angle, degree
+init_phi : 0.0  # initial cargo angle, degree
+init_phi2 : 0.0  # initial 2nd cart angle, degree

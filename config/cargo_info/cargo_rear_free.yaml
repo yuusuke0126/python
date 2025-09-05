@@ -1,0 +1,5 @@
+p_dist : 0.0  # distance between tugbot wheel center and pivot point of gripper
+c_dist : 0.5  # distance between pivot point of gripper and cargo wheel center
+cf_dist : 0.45  # distance between pivot point of gripper and cart front edge
+cart_length : 0.84
+cart_width : 0.65

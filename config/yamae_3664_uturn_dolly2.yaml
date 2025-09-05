@@ -1,0 +1,19 @@
+motion_plan:
+  - type : "linear"
+    goal : 1.0
+    curve_radius : 0.0
+  - type : "curve"
+    goal : 180.0   # degree
+    curve_radius : 1.0  # stabilizer
+  - type : "linear"
+    goal : 2.0
+    curve_radius : 0
+p_dist : 0.0  # distance between tugbot wheel center and pivot point of gripper
+c_dist : 0.0  #　distance between pivot point of gripper and cargo wheel center, case of stabilizer
+cf_dist : 0.45  # distance between pivot point of gripper and cart front edge
+cart_length : 0.88
+cart_width : 0.65
+x0 : 0.0  # initial x of tugbot wheel center
+y0 : 0.47  # initial y of tugbot wheel center
+init_theta : 0.0 # initial tugbot angle, degree
+init_phi : 0.0  # initial cargo angle, degree

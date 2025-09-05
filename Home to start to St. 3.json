@@ -1,21 +1,21 @@
 [
   {
-    "id": 0,
+    "id": 5,
     "sector_id": 1,
     "location_id": 1,
-    "name": "Pipe 0",
-    "closed": true,
+    "name": "Home to start to St. 3",
+    "closed": false,
     "path": [
       {
         "can_overtake": 0,
         "id": 0,
         "name": "",
         "point": {
-          "x": -8.6,
-          "y": -0.8,
+          "x": 12.4,
+          "y": 14.5,
           "z": 0.0
         },
-        "radius": 0.7,
+        "radius": 1.0,
         "shift_from_centre": 0.0
       },
       {
@@ -23,11 +23,11 @@
         "id": 1,
         "name": "",
         "point": {
-          "x": 13.4,
-          "y": 1.1,
+          "x": 12.3,
+          "y": 23.7,
           "z": 0.0
         },
-        "radius": 0.7,
+        "radius": 1.0,
         "shift_from_centre": 0.0
       },
       {
@@ -35,11 +35,11 @@
         "id": 2,
         "name": "",
         "point": {
-          "x": 13.6,
-          "y": -1.1,
+          "x": 6.7,
+          "y": 23.3,
           "z": 0.0
         },
-        "radius": 0.7,
+        "radius": 1.0,
         "shift_from_centre": 0.0
       },
       {
@@ -47,11 +47,11 @@
         "id": 3,
         "name": "",
         "point": {
-          "x": 16.25,
-          "y": -0.739,
+          "x": -69.2,
+          "y": 23.073339462280273,
           "z": 0.0
         },
-        "radius": 0.7,
+        "radius": 1.0,
         "shift_from_centre": 0.0
       },
       {
@@ -59,11 +59,11 @@
         "id": 4,
         "name": "",
         "point": {
-          "x": 18.05,
-          "y": -20.6,
+          "x": -69.7,
+          "y": 24.935590744018555,
           "z": 0.0
         },
-        "radius": 0.7,
+        "radius": 0.75,
         "shift_from_centre": 0.0
       },
       {
@@ -71,11 +71,11 @@
         "id": 5,
         "name": "",
         "point": {
-          "x": 19.5,
-          "y": -24.5,
+          "x": -70.1,
+          "y": 56.1,
           "z": 0.0
         },
-        "radius": 0.7,
+        "radius": 1.0,
         "shift_from_centre": 0.0
       },
       {
@@ -83,11 +83,11 @@
         "id": 6,
         "name": "",
         "point": {
-          "x": 19.9,
-          "y": -33.6,
+          "x": -68.3,
+          "y": 57.0,
           "z": 0.0
         },
-        "radius": 0.7,
+        "radius": 1.0,
         "shift_from_centre": 0.0
       },
       {
@@ -95,11 +95,11 @@
         "id": 7,
         "name": "",
         "point": {
-          "x": 15.1,
-          "y": -33.9,
+          "x": -67.3,
+          "y": 55.6,
           "z": 0.0
         },
-        "radius": 0.7,
+        "radius": 1.0,
         "shift_from_centre": 0.0
       },
       {
@@ -107,47 +107,11 @@
         "id": 8,
         "name": "",
         "point": {
-          "x": 14.9,
-          "y": -30.7,
+          "x": -68.2,
+          "y": 53.9,
           "z": 0.0
         },
-        "radius": 0.7,
-        "shift_from_centre": 0.0
-      },
-      {
-        "can_overtake": 0,
-        "id": 9,
-        "name": "",
-        "point": {
-          "x": 15.3,
-          "y": -27.7,
-          "z": 0.0
-        },
-        "radius": 0.7,
-        "shift_from_centre": 0.0
-      },
-      {
-        "can_overtake": 0,
-        "id": 10,
-        "name": "",
-        "point": {
-          "x": 13.6,
-          "y": -27.3,
-          "z": 0.0
-        },
-        "radius": 0.7,
-        "shift_from_centre": 0.0
-      },
-      {
-        "can_overtake": false,
-        "id": 11,
-        "name": "",
-        "point": {
-          "x": -6.84,
-          "y": -28.5,
-          "z": 0.0
-        },
-        "radius": 1.7,
+        "radius": 1.0,
         "shift_from_centre": 0.0
       }
     ]

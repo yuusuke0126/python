@@ -1,0 +1,10 @@
+motion_plan = [
+  - type : "linear"
+    goal : 1.0
+    curve_radius : 0.0
+  - type : "curve"
+    goal : 90.0
+    curve_radius : 2.9
+  - type : "linear"
+    goal : 2.0
+    curve_radius : 0.0
