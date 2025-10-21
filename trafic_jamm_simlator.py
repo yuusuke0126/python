@@ -51,30 +51,31 @@ class TrafficSimulator:
                  decel_zone_center_deg=90,
                  decel_zone_width_deg=40,
                  decel_zone_speed_kmh=65,
-                 safe_distance_m=50,
-                 brake_distance_m=35,
+                 min_distance_m=2.0,
+                 desired_time_headway=1.5,
                  accel_rate_mps2=2.0,
-                 decel_rate_mps2=4.9):
+                 comfortable_decel_mps2=3.0):
         """
-        Initialize traffic simulator with intuitive real-world parameters
+        Initialize traffic simulator with IDM (Intelligent Driver Model)
         
         Args:
             num_vehicles: Number of vehicles on the road
-            max_speed_kmh: Maximum speed (km/h)
+            max_speed_kmh: Maximum desired speed (km/h)
             decel_zone_center_deg: Center angle of deceleration zone (degrees)
             decel_zone_width_deg: Width of deceleration zone (degrees)
-            decel_zone_speed_kmh: Speed in deceleration zone (km/h)
-            safe_distance_m: Safe following distance (meters)
-            brake_distance_m: Distance at which to start braking (meters)
-            accel_rate_mps2: Acceleration rate (m/s²)
-            decel_rate_mps2: Deceleration rate (m/s²)
+            decel_zone_speed_kmh: Desired speed in deceleration zone (km/h)
+            min_distance_m: Minimum distance to front vehicle (meters)
+            desired_time_headway: Desired time headway (seconds)
+            accel_rate_mps2: Maximum acceleration (m/s²)
+            comfortable_decel_mps2: Comfortable deceleration (m/s²)
         """
         self.num_vehicles = num_vehicles
         
-        # Convert speeds from km/h to rad/s
-        self.max_speed = self._kmh_to_rads(max_speed_kmh)
-        decel_zone_speed_rads = self._kmh_to_rads(decel_zone_speed_kmh)
-        self.decel_zone_speed_factor = decel_zone_speed_rads / self.max_speed
+        # Convert speeds from km/h to m/s and rad/s
+        self.max_speed_ms = max_speed_kmh / 3.6  # m/s
+        self.max_speed = self._kmh_to_rads(max_speed_kmh)  # rad/s
+        self.decel_zone_speed_ms = decel_zone_speed_kmh / 3.6  # m/s
+        self.decel_zone_speed = self._kmh_to_rads(decel_zone_speed_kmh)  # rad/s
         
         # Convert deceleration zone from degrees to radians
         decel_zone_center_rad = np.radians(decel_zone_center_deg)
@@ -82,21 +83,19 @@ class TrafficSimulator:
         self.decel_zone_start = decel_zone_center_rad - decel_zone_half_width_rad
         self.decel_zone_end = decel_zone_center_rad + decel_zone_half_width_rad
         
-        # Convert distances from meters to radians
-        self.safe_distance = self._meters_to_rads(safe_distance_m)
-        self.brake_distance = self._meters_to_rads(brake_distance_m)
-        
-        # Convert acceleration/deceleration from m/s² to rad/s per frame (dt=0.1s)
-        self.accel_rate = self._mps2_to_rads_per_frame(accel_rate_mps2)
-        self.decel_rate = self._mps2_to_rads_per_frame(decel_rate_mps2)
+        # IDM parameters in m/s units
+        self.min_distance_m = min_distance_m  # s0 in IDM
+        self.desired_time_headway = desired_time_headway  # T in IDM
+        self.max_accel_mps2 = accel_rate_mps2  # a_max in IDM
+        self.comfortable_decel_mps2 = comfortable_decel_mps2  # b in IDM
         
         # Store original values for display
         self.max_speed_kmh = max_speed_kmh
         self.decel_zone_speed_kmh = decel_zone_speed_kmh
-        self.safe_distance_m = safe_distance_m
-        self.brake_distance_m = brake_distance_m
+        self.min_distance_m_display = min_distance_m
+        self.desired_time_headway_display = desired_time_headway
         self.accel_rate_mps2 = accel_rate_mps2
-        self.decel_rate_mps2 = decel_rate_mps2
+        self.comfortable_decel_mps2_display = comfortable_decel_mps2
         
         # Initialize vehicles
         self.vehicles = []
@@ -145,43 +144,67 @@ class TrafficSimulator:
         return distance, front_idx
     
     def update(self, dt=0.1):
-        """Update simulation state"""
-        # Calculate target speeds for all vehicles
-        target_speeds = []
+        """Update simulation state using IDM (Intelligent Driver Model)"""
+        # Calculate accelerations for all vehicles using IDM
+        accelerations = []
         
         for i, vehicle in enumerate(self.vehicles):
-            # Default target is max speed
-            target_speed = self.max_speed
+            # Convert current speed from rad/s to m/s for IDM calculation
+            v_ms = vehicle.speed * self.RADIUS_M  # Current speed in m/s
             
-            # Check if in deceleration zone
+            # Determine desired speed based on location
             if self.is_in_decel_zone(vehicle.angle):
-                target_speed = self.max_speed * self.decel_zone_speed_factor
+                v0_ms = self.decel_zone_speed_ms  # Desired speed in decel zone
+            else:
+                v0_ms = self.max_speed_ms  # Normal desired speed
             
-            # Check distance to front vehicle
-            distance, front_idx = self.get_distance_to_front(i)
-            front_speed = self.vehicles[front_idx].speed
+            # Get distance and speed of front vehicle
+            distance_rad, front_idx = self.get_distance_to_front(i)
+            distance_m = distance_rad * self.RADIUS_M  # Convert to meters
+            v_front_ms = self.vehicles[front_idx].speed * self.RADIUS_M  # Front vehicle speed in m/s
             
-            # Adjust speed based on following distance
-            if distance < self.brake_distance:
-                # Too close - match or slow down to front vehicle speed
-                target_speed = min(target_speed, front_speed * 0.9)
-            elif distance < self.safe_distance:
-                # Approaching - match front vehicle speed
-                target_speed = min(target_speed, front_speed)
+            # Calculate relative speed (positive = approaching)
+            delta_v = v_ms - v_front_ms
             
-            target_speeds.append(target_speed)
+            # IDM: Calculate desired gap (s*)
+            # s* = s0 + v*T + (v*Δv)/(2*sqrt(a*b))
+            interaction_term = (v_ms * delta_v) / (2 * np.sqrt(self.max_accel_mps2 * self.comfortable_decel_mps2))
+            s_star = self.min_distance_m + v_ms * self.desired_time_headway + interaction_term
+            
+            # Ensure s_star is non-negative
+            s_star = max(s_star, self.min_distance_m)
+            
+            # IDM: Calculate acceleration
+            # a = a_max * [1 - (v/v0)^4 - (s*/s)^2]
+            
+            # Free road acceleration term
+            if v0_ms > 0:
+                free_road_term = 1.0 - (v_ms / v0_ms) ** 4
+            else:
+                free_road_term = 0
+            
+            # Interaction term
+            if distance_m > 0:
+                interaction_term = (s_star / distance_m) ** 2
+            else:
+                interaction_term = float('inf')  # Emergency brake
+            
+            # Total acceleration
+            accel_mps2 = self.max_accel_mps2 * (free_road_term - interaction_term)
+            
+            # Convert acceleration from m/s² to rad/s²
+            accel_rads2 = accel_mps2 / self.RADIUS_M
+            
+            accelerations.append(accel_rads2)
         
         # Update vehicle speeds and positions
         for i, vehicle in enumerate(self.vehicles):
-            target_speed = target_speeds[i]
+            accel = accelerations[i]
             
-            # Accelerate or decelerate towards target speed
-            if vehicle.speed < target_speed:
-                vehicle.speed = min(vehicle.speed + self.accel_rate, target_speed)
-            elif vehicle.speed > target_speed:
-                vehicle.speed = max(vehicle.speed - self.decel_rate, target_speed)
+            # Update speed: v_new = v_old + a * dt
+            vehicle.speed += accel * dt
             
-            # Ensure speed doesn't exceed max
+            # Ensure speed is non-negative and doesn't exceed max
             vehicle.speed = max(0, min(vehicle.speed, self.max_speed))
             
             # Update position
@@ -311,32 +334,34 @@ def create_animation(simulator, duration=60, fps=30):
 def main():
     """Main function to run the traffic simulator"""
     
-    # Create simulator with intuitive real-world parameters
+    # Create simulator with IDM (Intelligent Driver Model)
     # Reference: 120 km/h = one lap per minute (circular road: 2000m circumference)
     simulator = TrafficSimulator(
         num_vehicles=60,              # Number of vehicles
         max_speed_kmh=100,            # Maximum speed: 100 km/h
         decel_zone_center_deg=90,     # Deceleration zone center: 90° (top of circle)
         decel_zone_width_deg=40,      # Deceleration zone width: 40°
-        decel_zone_speed_kmh=50,      # Speed in decel zone: 65 km/h (uphill/tunnel)
-        safe_distance_m=30,           # Safe following distance: 50m (≈2 second rule)
-        brake_distance_m=20,          # Brake initiation distance: 35m
-        accel_rate_mps2=1.5,          # Acceleration: 2.0 m/s² (normal acceleration)
-        decel_rate_mps2=3.5,          # Deceleration: 4.9 m/s² (normal braking)
+        decel_zone_speed_kmh=50,      # Speed in decel zone: 50 km/h (uphill/tunnel)
+        min_distance_m=2.0,           # Minimum distance: 2m (IDM parameter s0)
+        desired_time_headway=1.5,     # Time headway: 1.5s (IDM parameter T)
+        accel_rate_mps2=1.5,          # Max acceleration: 1.5 m/s² (IDM parameter a)
+        comfortable_decel_mps2=3.5,   # Comfortable deceleration: 3.5 m/s² (IDM parameter b)
     )
     
-    print("Traffic Jam Simulator")
+    print("Traffic Jam Simulator with IDM (Intelligent Driver Model)")
     print("=" * 70)
     print(f"Reference: 120 km/h = one lap per minute (circular road: 2000m)")
     print("=" * 70)
-    print(f"Number of vehicles:        {simulator.num_vehicles}")
-    print(f"Max speed:                 {simulator.max_speed_kmh} km/h")
-    print(f"Deceleration zone:         {np.degrees(simulator.decel_zone_start):.1f}° - {np.degrees(simulator.decel_zone_end):.1f}°")
-    print(f"Speed in decel zone:       {simulator.decel_zone_speed_kmh} km/h ({simulator.decel_zone_speed_factor * 100:.0f}% of max)")
-    print(f"Safe following distance:   {simulator.safe_distance_m}m")
-    print(f"Brake initiation distance: {simulator.brake_distance_m}m")
-    print(f"Acceleration rate:         {simulator.accel_rate_mps2} m/s²")
-    print(f"Deceleration rate:         {simulator.decel_rate_mps2} m/s²")
+    print(f"Number of vehicles:          {simulator.num_vehicles}")
+    print(f"Max desired speed:           {simulator.max_speed_kmh} km/h")
+    print(f"Deceleration zone:           {np.degrees(simulator.decel_zone_start):.1f}° - {np.degrees(simulator.decel_zone_end):.1f}°")
+    print(f"Desired speed in decel zone: {simulator.decel_zone_speed_kmh} km/h")
+    print(f"")
+    print(f"IDM Parameters:")
+    print(f"  Minimum distance (s0):     {simulator.min_distance_m}m")
+    print(f"  Time headway (T):          {simulator.desired_time_headway}s")
+    print(f"  Max acceleration (a):      {simulator.accel_rate_mps2} m/s²")
+    print(f"  Comfortable decel (b):     {simulator.comfortable_decel_mps2_display} m/s²")
     print("=" * 70)
     print("\nStarting animation... (Close window to exit)")
     
