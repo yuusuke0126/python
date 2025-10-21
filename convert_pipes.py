@@ -58,7 +58,7 @@ def convert_yaml_to_json(yaml_data, script_file):
             new_pipe['path'].append(new_checkpoint)
         
         # Generate filename using pipe name
-        filename = f"{pipe.get('name', f'Pipe_{i}')}.json"
+        filename = f"_{i:02d}_{pipe.get('name', f'Pipe_{i}')}.json"
         json_file = os.path.join(save_dir, filename)
         
         with open(json_file, 'w', encoding='utf-8') as jf:
