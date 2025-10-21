@@ -247,18 +247,20 @@ def create_animation(simulator, duration=60, fps=30):
              ha='center', va='center', fontsize=10, color='red', fontweight='bold')
     
     # Initialize vehicle scatter plot
+    # Convert max speed to km/h for display
+    max_speed_kmh = simulator.max_speed * simulator.RADIUS_M * 3.6
     scatter = ax1.scatter([], [], c=[], s=100, cmap='RdYlGn', vmin=0, 
-                         vmax=simulator.max_speed, edgecolors='black', linewidths=1)
+                         vmax=max_speed_kmh, edgecolors='black', linewidths=1)
     
     # Add colorbar
     cbar = plt.colorbar(scatter, ax=ax1, fraction=0.046, pad=0.04)
-    cbar.set_label('Speed', rotation=270, labelpad=15)
+    cbar.set_label('Speed (km/h)', rotation=270, labelpad=15)
     
     # Right plot: Speed vs Position
     ax2.set_xlim(0, 2*np.pi)
-    ax2.set_ylim(0, simulator.max_speed * 1.1)
+    ax2.set_ylim(0, max_speed_kmh * 1.1)
     ax2.set_xlabel('Position (radians)', fontsize=12)
-    ax2.set_ylabel('Speed (rad/s)', fontsize=12)
+    ax2.set_ylabel('Speed (km/h)', fontsize=12)
     ax2.set_title('Speed Distribution', fontsize=14, fontweight='bold')
     ax2.grid(True, alpha=0.3)
     
@@ -268,7 +270,7 @@ def create_animation(simulator, duration=60, fps=30):
     ax2.legend()
     
     speed_scatter = ax2.scatter([], [], c=[], s=50, cmap='RdYlGn', 
-                               vmin=0, vmax=simulator.max_speed,
+                               vmin=0, vmax=max_speed_kmh,
                                edgecolors='black', linewidths=0.5)
     
     # Time text
@@ -295,6 +297,9 @@ def create_animation(simulator, duration=60, fps=30):
         # Get visualization data
         angles, speeds = simulator.get_visualization_data()
         
+        # Convert speeds from rad/s to km/h for display
+        speeds_kmh = np.array(speeds) * simulator.RADIUS_M * 3.6
+        
         # Convert to cartesian coordinates for circular plot
         x = np.cos(angles)
         y = np.sin(angles)
@@ -302,24 +307,24 @@ def create_animation(simulator, duration=60, fps=30):
         
         # Update circular road plot
         scatter.set_offsets(positions)
-        scatter.set_array(np.array(speeds))
+        scatter.set_array(speeds_kmh)
         
         # Update speed vs position plot
-        speed_positions = np.column_stack([angles, speeds])
+        speed_positions = np.column_stack([angles, speeds_kmh])
         speed_scatter.set_offsets(speed_positions)
-        speed_scatter.set_array(np.array(speeds))
+        speed_scatter.set_array(speeds_kmh)
         
         # Update time
         time_text.set_text(f'Time: {simulator.time:.1f}s')
         
-        # Calculate statistics
-        avg_speed = np.mean(speeds)
-        min_speed = np.min(speeds)
-        speed_variance = np.var(speeds)
+        # Calculate statistics in km/h
+        avg_speed_kmh = np.mean(speeds_kmh)
+        min_speed_kmh = np.min(speeds_kmh)
+        speed_variance_kmh = np.var(speeds_kmh)
         
-        stats_text.set_text(f'Avg Speed: {avg_speed:.4f}\n'
-                           f'Min Speed: {min_speed:.4f}\n'
-                           f'Variance: {speed_variance:.6f}')
+        stats_text.set_text(f'Avg Speed: {avg_speed_kmh:.1f} km/h\n'
+                           f'Min Speed: {min_speed_kmh:.1f} km/h\n'
+                           f'Variance: {speed_variance_kmh:.2f}')
         
         return scatter, speed_scatter, time_text, stats_text
     
@@ -336,32 +341,34 @@ def main():
     
     # Create simulator with IDM (Intelligent Driver Model)
     # Reference: 120 km/h = one lap per minute (circular road: 2000m circumference)
+    # All vehicles are configured as "poor drivers" (aggressive, sudden braking)
     simulator = TrafficSimulator(
-        num_vehicles=60,              # Number of vehicles
+        num_vehicles=30,              # Number of vehicles
         max_speed_kmh=100,            # Maximum speed: 100 km/h
         decel_zone_center_deg=90,     # Deceleration zone center: 90° (top of circle)
         decel_zone_width_deg=40,      # Deceleration zone width: 40°
-        decel_zone_speed_kmh=50,      # Speed in decel zone: 50 km/h (uphill/tunnel)
-        min_distance_m=2.0,           # Minimum distance: 2m (IDM parameter s0)
-        desired_time_headway=1.5,     # Time headway: 1.5s (IDM parameter T)
-        accel_rate_mps2=1.5,          # Max acceleration: 1.5 m/s² (IDM parameter a)
-        comfortable_decel_mps2=3.5,   # Comfortable deceleration: 3.5 m/s² (IDM parameter b)
+        decel_zone_speed_kmh=65,      # Speed in decel zone: 50 km/h (uphill/tunnel)
+        min_distance_m=1.5,           # Minimum distance: 1.5m (close following)
+        desired_time_headway=0.9,     # Time headway: 0.9s (short gap - aggressive)
+        accel_rate_mps2=2.5,          # Max acceleration: 2.5 m/s² (rapid acceleration)
+        comfortable_decel_mps2=6.0,   # Comfortable deceleration: 6.0 m/s² (sudden braking)
     )
     
     print("Traffic Jam Simulator with IDM (Intelligent Driver Model)")
     print("=" * 70)
     print(f"Reference: 120 km/h = one lap per minute (circular road: 2000m)")
+    print(f"Driver Type: POOR DRIVERS (aggressive, sudden braking)")
     print("=" * 70)
     print(f"Number of vehicles:          {simulator.num_vehicles}")
     print(f"Max desired speed:           {simulator.max_speed_kmh} km/h")
     print(f"Deceleration zone:           {np.degrees(simulator.decel_zone_start):.1f}° - {np.degrees(simulator.decel_zone_end):.1f}°")
     print(f"Desired speed in decel zone: {simulator.decel_zone_speed_kmh} km/h")
     print(f"")
-    print(f"IDM Parameters:")
-    print(f"  Minimum distance (s0):     {simulator.min_distance_m}m")
-    print(f"  Time headway (T):          {simulator.desired_time_headway}s")
-    print(f"  Max acceleration (a):      {simulator.accel_rate_mps2} m/s²")
-    print(f"  Comfortable decel (b):     {simulator.comfortable_decel_mps2_display} m/s²")
+    print(f"IDM Parameters (Poor Driver Settings):")
+    print(f"  Minimum distance (s0):     {simulator.min_distance_m}m (close following)")
+    print(f"  Time headway (T):          {simulator.desired_time_headway}s (short gap)")
+    print(f"  Max acceleration (a):      {simulator.accel_rate_mps2} m/s² (rapid accel)")
+    print(f"  Comfortable decel (b):     {simulator.comfortable_decel_mps2_display} m/s² (sudden brake)")
     print("=" * 70)
     print("\nStarting animation... (Close window to exit)")
     
